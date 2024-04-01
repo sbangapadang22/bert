@@ -83,3 +83,27 @@ for epoch in range(epochs):
     val_loss, val_acc = evaluate(model, val_loader, device)
     print(f"Epoch {epoch+1} - Train Loss: {total_loss/len(train_loader)}, Val Loss: {val_loss}, Val Acc: {val_acc}")
 
+### Document Classification / Tagging
+newsgroups_data = fetch_20newsgroups(subset='all', remove=('headers', 'footers', 'quotes'))
+texts = newsgroups_data.data
+labels = newsgroups_data.target
+
+tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+doc_encodings = tokenizer(texts, truncation=True, padding=True, max_length=512, return_tensors='pt')
+
+train_doc_texts, val_doc_texts, train_doc_labels, val_doc_labels = train_test_split(
+    doc_encodings['input_ids'], torch.tensor(labels), test_size=0.2, random_state=42
+)
+
+# Create PyTorch datasets
+train_doc_dataset = TensorDataset(train_doc_texts, train_doc_labels)
+val_doc_dataset = TensorDataset(val_doc_texts, val_doc_labels)
+
+# Create data loaders
+batch_size = 16
+train_doc_loader = DataLoader(train_doc_dataset, batch_size=batch_size, shuffle=True)
+val_doc_loader = DataLoader(val_doc_dataset, batch_size=batch_size)
+
+# Load pre-trained BERT model and add a classification layer
+num_categories = len(newsgroups_data.target_names)
+model_doc = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=num_categories)
